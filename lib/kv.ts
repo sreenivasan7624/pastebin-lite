@@ -1,26 +1,76 @@
-import { kv } from '@vercel/kv';
+import Redis from 'ioredis';
+
+let redisClient: Redis | null = null;
 
 /**
- * Get the KV client instance
- * Throws if KV is not properly configured
+ * Get (or create) the Redis client instance.
+ * Uses the REDIS_URL environment variable provided by the Vercel Redis integration.
  */
-export function getKV() {
-  if (!kv) {
-    throw new Error('KV client not configured. Please set KV_REDIS_URL, KV_REDIS_REST_URL, and KV_REDIS_REST_TOKEN environment variables.');
+function getRedisClient(): Redis {
+  const url = process.env.REDIS_URL;
+
+  if (!url) {
+    throw new Error('REDIS_URL environment variable is not set. Please configure it in Vercel and .env.local.');
   }
-  return kv;
+
+  if (!redisClient) {
+    redisClient = new Redis(url, {
+      maxRetriesPerRequest: 1,
+      enableOfflineQueue: false,
+    });
+  }
+
+  return redisClient;
 }
 
 /**
- * Check if KV connection is available
+ * Check if Redis connection is available.
  */
 export async function checkKVConnection(): Promise<boolean> {
   try {
-    const client = getKV();
-    // Try a simple ping operation
+    const client = getRedisClient();
     await client.ping();
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
+}
+
+/**
+ * Check if a key exists.
+ */
+export async function kvExists(key: string): Promise<boolean> {
+  const client = getRedisClient();
+  const result = await client.exists(key);
+  return result === 1;
+}
+
+/**
+ * Get a JSON value from Redis and parse it.
+ */
+export async function kvGet<T>(key: string): Promise<T | null> {
+  const client = getRedisClient();
+  const raw = await client.get(key);
+
+  if (raw === null) {
+    return null;
+  }
+
+  return JSON.parse(raw) as T;
+}
+
+/**
+ * Set a JSON value in Redis.
+ */
+export async function kvSet(key: string, value: unknown): Promise<void> {
+  const client = getRedisClient();
+  await client.set(key, JSON.stringify(value));
+}
+
+/**
+ * Set a JSON value in Redis with TTL in seconds.
+ */
+export async function kvSetEx(key: string, ttlSeconds: number, value: unknown): Promise<void> {
+  const client = getRedisClient();
+  await client.setex(key, ttlSeconds, JSON.stringify(value));
 }

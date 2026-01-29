@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Pastebin-Lite
 
 A simple pastebin-like application built with Next.js and Vercel KV. Users can create text pastes with optional time-based expiry and view count limits, then share them via a simple URL.
@@ -209,3 +210,6 @@ All errors return JSON responses with an `error` field.
 ## License
 
 MIT
+=======
+# Pastebin
+>>>>>>> 64dfef8241f27ceeaf1ce338bc2ea47382bf8ed1

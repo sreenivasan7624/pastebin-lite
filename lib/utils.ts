@@ -1,5 +1,5 @@
 import { headers } from 'next/headers';
-import { getKV } from './kv';
+import { kvExists } from './kv';
 
 const ALPHANUMERIC = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const ID_LENGTH = 7; // 7 characters gives good collision resistance
@@ -49,7 +49,6 @@ export function calculateExpiresAt(ttlSeconds: number, currentTime: number): num
  * Checks KV for uniqueness and retries on collision
  */
 export async function generatePasteId(): Promise<string> {
-  const kv = getKV();
   const maxRetries = 10;
   
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -57,7 +56,7 @@ export async function generatePasteId(): Promise<string> {
     const key = `paste:${id}`;
     
     // Check if this ID already exists
-    const exists = await kv.exists(key);
+    const exists = await kvExists(key);
     if (!exists) {
       return id;
     }

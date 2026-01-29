@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { getKV } from './kv';
+import { kvGet, kvSet, kvSetEx } from './kv';
 import { getCurrentTime } from './utils';
 
 /**
@@ -96,25 +96,22 @@ export function getRemainingViews(paste: PasteData): number | null {
  * Fetch a paste from KV by ID
  */
 export async function getPaste(id: string): Promise<PasteData | null> {
-  const kv = getKV();
   const key = `paste:${id}`;
-  
-  const data = await kv.get<PasteData>(key);
-  return data;
+
+  return kvGet<PasteData>(key);
 }
 
 /**
  * Store a paste in KV
  */
 export async function storePaste(id: string, paste: PasteData, ttlSeconds?: number): Promise<void> {
-  const kv = getKV();
   const key = `paste:${id}`;
-  
+
   if (ttlSeconds) {
     // Set with TTL for automatic cleanup
-    await kv.setex(key, ttlSeconds, paste);
+    await kvSetEx(key, ttlSeconds, paste);
   } else {
-    await kv.set(key, paste);
+    await kvSet(key, paste);
   }
 }
 
@@ -125,7 +122,6 @@ export async function storePaste(id: string, paste: PasteData, ttlSeconds?: numb
  * this should be sufficient. For higher concurrency, consider using Redis transactions.
  */
 export async function incrementViewCount(id: string): Promise<PasteData | null> {
-  const kv = getKV();
   const key = `paste:${id}`;
   
   // Fetch current paste
@@ -143,9 +139,9 @@ export async function incrementViewCount(id: string): Promise<PasteData | null> 
   
   // Update in KV
   if (ttl && ttl > 0) {
-    await kv.setex(key, ttl, paste);
+    await kvSetEx(key, ttl, paste);
   } else {
-    await kv.set(key, paste);
+    await kvSet(key, paste);
   }
   
   return paste;
